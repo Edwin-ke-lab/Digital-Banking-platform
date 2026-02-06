@@ -1,0 +1,7 @@
+CREATE TABLE accounts (
+    account_number VARCHAR(20) PRIMARY KEY,
+    customer_id INT NOT NULL,
+    balance DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

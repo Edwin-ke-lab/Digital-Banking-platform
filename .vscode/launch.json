@@ -1,0 +1,50 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "AdminDashboard",
+            "request": "launch",
+            "mainClass": "GUI.AdminDashboard",
+            "projectName": "DIGITAL BANKING AND FINANCE PLATFORM_fddf5684"
+        },
+        {
+            "type": "java",
+            "name": "LoginPage",
+            "request": "launch",
+            "mainClass": "GUI.LoginPage",
+            "projectName": "DIGITAL BANKING AND FINANCE PLATFORM_fddf5684"
+        },
+        {
+            "type": "java",
+            "name": "AdminDashboard",
+            "request": "launch",
+            "mainClass": "GUI.AdminDashboard",
+            "projectName": "BANK MANAGEMENT SYSTEM_253787e8"
+        },
+        {
+            "type": "java",
+            "name": "LoginPage",
+            "request": "launch",
+            "mainClass": "GUI.LoginPage",
+            "projectName": "BANK MANAGEMENT SYSTEM_253787e8"
+        },
+        {
+            "type": "java",
+            "name": "AdminDashboard",
+            "request": "launch",
+            "mainClass": "GUI.AdminDashboard",
+            "projectName": "BANKINGSYSTEM_b7e91595"
+        },
+        {
+            "type": "java",
+            "name": "LoginPage",
+            "request": "launch",
+            "mainClass": "GUI.LoginPage",
+            "projectName": "BANKINGSYSTEM_b7e91595"
+        }
+    ]
+}
