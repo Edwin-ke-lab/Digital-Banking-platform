@@ -1241,6 +1241,14 @@ public class AdminDashboard {
         notificationLabel.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
         notificationPanel.add(notificationLabel, BorderLayout.CENTER);
 
+        // Add mouse listener to notification label for clicking to view complaints
+        notificationLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                showComplaintsView();
+            }
+        });
+
         // Main content area (dashboard display)
         JPanel mainContentArea = new JPanel(new BorderLayout());
         
@@ -1925,6 +1933,76 @@ public class AdminDashboard {
         });
         
         return btn;
+    }
+
+    // Method to display complaints view
+    private void showComplaintsView() {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String query = "SELECT id, account_number, complaint_description, response FROM complaints";
+            PreparedStatement stmt = conn.prepareStatement(query);
+            ResultSet rs = stmt.executeQuery();
+
+            // Create table model
+            String[] columnNames = {"ID", "Account Number", "Complaint", "Response"};
+            DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0);
+
+            // Populate table model with data from ResultSet
+            while (rs.next()) {
+                Object[] row = {
+                    rs.getInt("id"),
+                    rs.getString("account_number"),
+                    rs.getString("complaint_description"),
+                    rs.getString("response")
+                };
+                tableModel.addRow(row);
+            }
+
+            // Create table and display in a scroll pane
+            JTable complaintsTable = new JTable(tableModel);
+            JScrollPane scrollPane = new JScrollPane(complaintsTable);
+            scrollPane.setPreferredSize(new Dimension(800, 400));
+
+            // Add a button to respond to complaints
+            JButton respondButton = new JButton("Respond to Complaint");
+            respondButton.addActionListener(e1 -> {
+                int selectedRow = complaintsTable.getSelectedRow();
+                if (selectedRow != -1) {
+                    int complaintId = (int) tableModel.getValueAt(selectedRow, 0);
+                    String response = JOptionPane.showInputDialog(frame, "Enter your response:");
+
+                    if (response != null && !response.trim().isEmpty()) {
+                        try {
+                            // Update the response and status in the database
+                            String updateQuery = "UPDATE complaints SET response = ?, status = 'Received' WHERE id = ?";
+                            PreparedStatement updateStmt = conn.prepareStatement(updateQuery);
+                            updateStmt.setString(1, response);
+                            updateStmt.setInt(2, complaintId);
+                            updateStmt.executeUpdate();
+
+                            JOptionPane.showMessageDialog(frame, "Response submitted successfully and status updated to 'Received'.", "Success", JOptionPane.INFORMATION_MESSAGE);
+
+                            // Refresh the table
+                            tableModel.setValueAt(response, selectedRow, 3);
+                        } catch (SQLException ex) {
+                            JOptionPane.showMessageDialog(frame, "Error submitting response: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(frame, "Response cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(frame, "Please select a complaint to respond to.", "Warning", JOptionPane.WARNING_MESSAGE);
+                }
+            });
+
+            JPanel panel = new JPanel();
+            panel.setLayout(new BorderLayout());
+            panel.add(scrollPane, BorderLayout.CENTER);
+            panel.add(respondButton, BorderLayout.SOUTH);
+
+            JOptionPane.showMessageDialog(frame, panel, "Customer Complaints", JOptionPane.INFORMATION_MESSAGE);
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(frame, "Error fetching complaints: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     // Thread to check for new complaints periodically
