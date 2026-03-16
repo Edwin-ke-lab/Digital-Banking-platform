@@ -1,7 +1,14 @@
 package GUI;
 
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.sql.Connection;
@@ -1776,6 +1783,9 @@ public class MenuPage {
 
         JButton btnRefreshTxn = createRoundedButton("Refresh", new Color(0, 123, 255));
         btnRefreshTxn.setPreferredSize(new Dimension(100, 32));
+        
+        JButton btnDownloadTxn = createRoundedButton("Download History", new Color(0, 123, 255));
+        btnDownloadTxn.setPreferredSize(new Dimension(140, 32));
 
         Runnable loadOverviewTransactions = () -> {
             try {
@@ -1800,13 +1810,19 @@ public class MenuPage {
         loadOverviewTransactions.run();
 
         btnRefreshTxn.addActionListener(e -> loadOverviewTransactions.run());
+        
+        btnDownloadTxn.addActionListener(e -> downloadTransactionHistory());
 
         JScrollPane txnScroll = new JScrollPane(txnArea);
         txnScroll.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
         JPanel txnButtonPanel = new JPanel(new BorderLayout());
         txnButtonPanel.add(txnScroll, BorderLayout.CENTER);
-        txnButtonPanel.add(btnRefreshTxn, BorderLayout.SOUTH);
+        
+        JPanel buttonPanelBottom = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
+        buttonPanelBottom.add(btnRefreshTxn);
+        buttonPanelBottom.add(btnDownloadTxn);
+        txnButtonPanel.add(buttonPanelBottom, BorderLayout.SOUTH);
 
         transactionPanel.add(txnButtonPanel, BorderLayout.CENTER);
 
@@ -2009,5 +2025,62 @@ public class MenuPage {
 
     public void show() {
         frame.setVisible(true);
+    }
+
+    // Method to download complete transaction history as CSV
+    private void downloadTransactionHistory() {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String query = "SELECT date, description, amount FROM transactions WHERE account_number = ? ORDER BY date DESC";
+            PreparedStatement stmt = conn.prepareStatement(query);
+            stmt.setString(1, accountNumber);
+            ResultSet rs = stmt.executeQuery();
+
+            // Build CSV content
+            StringBuilder csvContent = new StringBuilder();
+            csvContent.append("Date & Time,Description,Amount\n");
+            
+            boolean hasTransactions = false;
+            while (rs.next()) {
+                hasTransactions = true;
+                java.sql.Timestamp timestamp = rs.getTimestamp("date");
+                String dateTime = timestamp != null ? new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(timestamp.getTime())) : "N/A";
+                String description = rs.getString("description");
+                double amount = rs.getDouble("amount");
+                
+                // Escape quotes in description for CSV
+                String escapedDescription = description.replaceAll("\"", "\"\"");
+                csvContent.append("\"").append(dateTime).append("\",\"")
+                          .append(escapedDescription).append("\",")
+                          .append(amount).append("\n");
+            }
+
+            if (!hasTransactions) {
+                showErrorDialog("No Transactions", "You have no transaction history to download.");
+                return;
+            }
+
+            // Open file chooser to save CSV
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Save Transaction History");
+            fileChooser.setFileFilter(new FileNameExtensionFilter("CSV Files", "csv"));
+            
+            // Set default filename with timestamp
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+            String timestamp = dateFormat.format(new Date());
+            fileChooser.setSelectedFile(new File("Transaction_History_" + accountNumber + "_" + timestamp + ".csv"));
+            
+            int userSelection = fileChooser.showSaveDialog(frame);
+            if (userSelection == JFileChooser.APPROVE_OPTION) {
+                File fileToSave = fileChooser.getSelectedFile();
+                try (PrintWriter writer = new PrintWriter(new FileWriter(fileToSave))) {
+                    writer.print(csvContent.toString());
+                    showSuccessDialog("Download Complete", "Transaction history downloaded successfully to:\n" + fileToSave.getAbsolutePath());
+                } catch (IOException ex) {
+                    showErrorDialog("Save Error", "Error saving file: " + ex.getMessage());
+                }
+            }
+        } catch (SQLException ex) {
+            showErrorDialog("Error", "Failed to retrieve transactions: " + ex.getMessage());
+        }
     }
 }

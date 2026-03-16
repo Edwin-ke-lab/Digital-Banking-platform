@@ -1220,8 +1220,8 @@ public class AdminDashboard {
         
         btnLogout.addActionListener(e -> {
             JOptionPane.showMessageDialog(frame, "You have been logged out.");
-            frame.setVisible(false);
-            new LoginPage();
+            frame.dispose();
+            new CustomerLoginPage();
         });
         logoutPanel.add(btnLogout);
 
