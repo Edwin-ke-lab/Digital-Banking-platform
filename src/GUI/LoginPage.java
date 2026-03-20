@@ -12,8 +12,6 @@ import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -28,8 +26,6 @@ public class LoginPage {
     // Custom Rounded Button Class
     class RoundedButton extends JButton {
         private Color backgroundColor;
-        private Color hoverColor;
-        private Color pressedColor;
         private int cornerRadius = 25;
 
         public RoundedButton(String text) {
@@ -41,35 +37,10 @@ public class LoginPage {
 
             // Set default colors
             backgroundColor = getBackground();
-            hoverColor = backgroundColor.brighter();
-            pressedColor = backgroundColor.darker();
+            backgroundColor.brighter();
+            backgroundColor.darker();
 
-            // Add hover effects
-            addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseEntered(MouseEvent e) {
-                    setBackground(hoverColor);
-                    repaint();
-                }
 
-                @Override
-                public void mouseExited(MouseEvent e) {
-                    setBackground(backgroundColor);
-                    repaint();
-                }
-
-                @Override
-                public void mousePressed(MouseEvent e) {
-                    setBackground(pressedColor);
-                    repaint();
-                }
-
-                @Override
-                public void mouseReleased(MouseEvent e) {
-                    setBackground(hoverColor);
-                    repaint();
-                }
-            });
         }
 
         @Override
@@ -95,8 +66,8 @@ public class LoginPage {
         public void setBackground(Color bg) {
             super.setBackground(bg);
             backgroundColor = bg;
-            hoverColor = bg.brighter();
-            pressedColor = bg.darker();
+            bg.brighter();
+            bg.darker();
         }
     }
 

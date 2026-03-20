@@ -25,14 +25,12 @@ public class MenuPage {
     private JTextArea txtTransactions; // right panel transactions area
     private String customerFirstName; // Store customer's first name
     private JPanel rightPanel; // Reference to right panel for content switching
-    private JLabel notificationLabel; // Notification label for complaint responses
 
     public MenuPage(String accountNumber, Bank bank) {
         this.accountNumber = accountNumber;
         this.bank = bank;
         this.customerFirstName = getCustomerFirstName();
         initialize();
-        startResponseCheckingThread(); // Start checking for admin responses
     }
 
     // Method to fetch customer's first name from database
@@ -881,7 +879,8 @@ public class MenuPage {
 
         btnViewResponses.addActionListener(e -> {
             try (Connection conn = DatabaseConnection.getConnection()) {
-                String query = "SELECT complaint_description, response FROM complaints WHERE account_number = ? ORDER BY id DESC";
+                // Fetch all complaints (both with and without responses)
+                String query = "SELECT id, complaint_description, response FROM complaints WHERE account_number = ? ORDER BY id DESC";
                 PreparedStatement stmt = conn.prepareStatement(query);
                 stmt.setString(1, accountNumber);
                 ResultSet rs = stmt.executeQuery();
@@ -890,34 +889,54 @@ public class MenuPage {
                 boolean hasComplaints = false;
                 while (rs.next()) {
                     hasComplaints = true;
+                    int complaintId = rs.getInt("id");
                     String complaintDesc = rs.getString("complaint_description");
                     String adminResponse = rs.getString("response");
 
-                    responses.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-                    responses.append("COMPLAINT:\n").append(complaintDesc).append("\n\n");
+                    responses.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+                    responses.append("COMPLAINT ID: ").append(complaintId).append("\n\n");
+                    responses.append("YOUR COMPLAINT:\n").append(complaintDesc).append("\n\n");
                     responses.append("ADMIN RESPONSE:\n");
                     if (adminResponse != null && !adminResponse.isEmpty()) {
                         responses.append(adminResponse).append("\n");
                     } else {
-                        responses.append("[Response Pending]\n");
+                        responses.append("[Response Pending - Admin is reviewing your complaint]\n");
                     }
                     responses.append("\n");
                 }
 
                 if (!hasComplaints) {
-                    showSuccessDialog("No Complaints", "You haven't submitted any complaints yet.");
+                    showSuccessDialog("No Complaints", "You have not submitted any complaints yet.");
                 } else {
                     JTextArea textArea = new JTextArea(responses.toString());
                     textArea.setEditable(false);
-                    textArea.setFont(new Font("Monospaced", Font.PLAIN, 11));
+                    textArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
                     textArea.setLineWrap(true);
                     textArea.setWrapStyleWord(true);
-                    textArea.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+                    textArea.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
                     textArea.setBackground(new Color(240, 248, 255));
                     textArea.setForeground(new Color(50, 50, 50));
 
                     JScrollPane scrollPane2 = new JScrollPane(textArea);
-                    JOptionPane.showMessageDialog(frame, scrollPane2, "Your Complaints & Responses", JOptionPane.INFORMATION_MESSAGE);
+                    
+                    // Create a dialog to display responses centered on screen
+                    JDialog dialog = new JDialog(frame, "Your Complaints & Responses", true);
+                    dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+                    dialog.setSize(700, 600);
+                    dialog.setLocationRelativeTo(frame); // Center on frame
+                    dialog.add(scrollPane2, BorderLayout.CENTER);
+                    
+                    // Add a close button at the bottom
+                    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+                    JButton closeBtn = new JButton("Close");
+                    closeBtn.addActionListener(ae -> {
+                        dialog.dispose();
+                       // Remove red dot when dialog is closed
+                    });
+                    buttonPanel.add(closeBtn);
+                    dialog.add(buttonPanel, BorderLayout.SOUTH);
+                    
+                    dialog.setVisible(true);
                 }
             } catch (SQLException ex) {
                 showErrorDialog("Error", "Failed to retrieve responses: " + ex.getMessage());
@@ -1832,29 +1851,11 @@ public class MenuPage {
         centerBottomPanel.add(buttonPanel, BorderLayout.NORTH);
         centerBottomPanel.add(transactionPanel, BorderLayout.CENTER);
 
-        // Create notification panel
-        notificationLabel = new JLabel("System Ready - Monitoring for new responses...");
-        notificationLabel.setFont(new Font("Arial", Font.BOLD, 12));
-        notificationLabel.setForeground(new Color(34, 139, 34));
-        notificationLabel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(34, 139, 34), 2),
-            BorderFactory.createEmptyBorder(10, 10, 10, 10)
-        ));
-        notificationLabel.setOpaque(true);
-        notificationLabel.setBackground(new Color(240, 255, 240));
-        notificationLabel.setHorizontalAlignment(JLabel.LEFT);
-
-        // Create top section with welcome, info, and notification
+        // Create top section with welcome and info
         JPanel topSection = new JPanel(new BorderLayout(0, 10));
         topSection.setBackground(new Color(245, 245, 245));
         topSection.add(lblTitle, BorderLayout.NORTH);
-        
-        JPanel infoAndNotifPanel = new JPanel(new BorderLayout(0, 10));
-        infoAndNotifPanel.setBackground(new Color(245, 245, 245));
-        infoAndNotifPanel.add(infoPanel, BorderLayout.NORTH);
-        infoAndNotifPanel.add(notificationLabel, BorderLayout.CENTER);
-        
-        topSection.add(infoAndNotifPanel, BorderLayout.CENTER);
+        topSection.add(infoPanel, BorderLayout.CENTER);
 
         mainPanel.add(topSection, BorderLayout.NORTH);
         mainPanel.add(centerBottomPanel, BorderLayout.CENTER);
@@ -1969,59 +1970,6 @@ public class MenuPage {
         JOptionPane.showMessageDialog(frame, panel, title, JOptionPane.ERROR_MESSAGE);
     }
 
-    // Thread to check for admin responses to complaints
-    private void startResponseCheckingThread() {
-        new Thread(() -> {
-            java.util.Set<Integer> seenComplaintIds = new java.util.HashSet<>();
-            while (true) {
-                try {
-                    // Check for new responses every 5 seconds
-                    Thread.sleep(5000);
-                    
-                    try (Connection conn = DatabaseConnection.getConnection()) {
-                        String query = "SELECT id, complaint_description, response FROM complaints WHERE account_number = ? AND response IS NOT NULL";
-                        PreparedStatement stmt = conn.prepareStatement(query);
-                        stmt.setString(1, accountNumber);
-                        ResultSet rs = stmt.executeQuery();
-                        
-                        while (rs.next()) {
-                            int complaintId = rs.getInt("id");
-                            String complaint = rs.getString("complaint_description");
-                            String response = rs.getString("response");
-                            
-                            // If we haven't seen this response before, show notification
-                            if (!seenComplaintIds.contains(complaintId)) {
-                                seenComplaintIds.add(complaintId);
-                                
-                                // Show popup notification
-                                SwingUtilities.invokeLater(() -> {
-                                    String message = "Admin Response Received!\n\n" +
-                                        "Your Complaint: " + complaint.substring(0, Math.min(40, complaint.length())) + 
-                                        (complaint.length() > 40 ? "..." : "") + "\n\n" +
-                                        "Admin Response: " + response.substring(0, Math.min(60, response.length())) + 
-                                        (response.length() > 60 ? "..." : "");
-                                    
-                                    JOptionPane.showMessageDialog(frame, message, 
-                                        "✓ Admin Response", JOptionPane.INFORMATION_MESSAGE);
-                                });
-                                
-                                // Update notification label
-                                SwingUtilities.invokeLater(() -> {
-                                    notificationLabel.setText("✓ Admin has responded to your complaint - View in Support section");
-                                    notificationLabel.setForeground(new Color(34, 139, 34));
-                                });
-                            }
-                        }
-                    } catch (SQLException ex) {
-                        ex.printStackTrace();
-                    }
-                } catch (InterruptedException ex) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
-            }
-        }).start();
-    }
 
     public void show() {
         frame.setVisible(true);
