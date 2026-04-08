@@ -346,15 +346,16 @@ public class MenuPage {
         }
 
         int answeredCount = bank.getDailyQuizzesAnswered(accountNumber);
+        final int MAX_ATTEMPTS_PER_DAY = 4;
         
-        if (answeredCount >= quizzes.size()) {
+        if (answeredCount >= MAX_ATTEMPTS_PER_DAY) {
             JLabel limitLabel = new JLabel("Daily Limit Reached!");
             limitLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
             limitLabel.setForeground(new Color(220, 20, 60));
             limitLabel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
             contentPanel.add(limitLabel);
             
-            JLabel nextLabel = new JLabel("You have answered all available questions for today. Please try again tomorrow.");
+            JLabel nextLabel = new JLabel("You have reached your daily limit of 4 questions. Please try again tomorrow.");
             nextLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
             nextLabel.setBorder(BorderFactory.createEmptyBorder(0, 20, 20, 20));
             contentPanel.add(nextLabel);
@@ -367,10 +368,17 @@ public class MenuPage {
                 }
             }
 
-            JLabel infoLabel = new JLabel("Answer a quiz question and earn 25 points!");
+            int remainingAttempts = MAX_ATTEMPTS_PER_DAY - answeredCount;
+            JLabel attemptsLabel = new JLabel("Attempts Remaining: " + remainingAttempts + " of " + MAX_ATTEMPTS_PER_DAY);
+            attemptsLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            attemptsLabel.setForeground(new Color(255, 140, 0));
+            attemptsLabel.setBorder(BorderFactory.createEmptyBorder(5, 20, 10, 20));
+            contentPanel.add(attemptsLabel);
+
+            JLabel infoLabel = new JLabel("Answer a quiz question and earn 25 points! (Each answer counts as 1 attempt)");
             infoLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
             infoLabel.setForeground(new Color(100, 100, 100));
-            infoLabel.setBorder(BorderFactory.createEmptyBorder(10, 20, 15, 20));
+            infoLabel.setBorder(BorderFactory.createEmptyBorder(5, 20, 15, 20));
             contentPanel.add(infoLabel);
 
             for (int idx : availableIndices) {
